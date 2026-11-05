@@ -1,4 +1,4 @@
-# Morgan Goods (Morgan Electronics) — public crawling policy
+# Morgan Appliances (Morgan Electronics) — public crawling policy
 
 User-agent: *
 Allow: /
@@ -104,5 +104,5 @@ Disallow: /
 User-agent: SeznamBot
 Disallow: /
 
-Sitemap: https://morgangoods.com/sitemap.xml
-Sitemap: https://morgangoods.com/api/sitemap.xml
+Sitemap: https://morganappliance.online/sitemap.xml
+Sitemap: https://morganappliance.online/api/sitemap.xml
