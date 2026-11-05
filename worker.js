@@ -134,6 +134,19 @@ export default {
       });
     }
 
+    // High-performance direct robots.txt for Googlebot & search engines
+    if (pathname === '/robots.txt') {
+      const robotsTxt = `User-agent: *\nAllow: /\nDisallow: /admin-page/\nDisallow: /cart\nDisallow: /checkout\nDisallow: /orders/\n\nSitemap: https://morganappliance.online/sitemap.xml\n`;
+      return new Response(robotsTxt, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+
     // Google Search Console verification
     if (pathname === '/googlec3eb02de72e21254.html' || pathname === '/googlec3eb02de72e21254') {
       return new Response('google-site-verification: googlec3eb02de72e21254.html', {
