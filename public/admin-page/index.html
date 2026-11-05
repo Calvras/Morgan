@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Morgan Goods — Admin Portal</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Hide scrollbars but keep functionality */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen pb-24 antialiased select-none">
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginSection" class="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-6 text-white">
+    <div class="w-full max-w-sm space-y-6 text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-orange-600/20 border border-orange-500/30 mb-2">
+        <img src="/logo.svg" alt="Morgan Goods" class="w-10 h-10">
+      </div>
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Morgan Goods</h1>
+        <p class="text-sm text-slate-400 mt-1">Store Admin Portal</p>
+      </div>
+
+      <form id="loginForm" class="space-y-4 pt-2">
+        <div class="text-left space-y-1.5">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Admin Password</label>
+          <div class="relative">
+            <input 
+              type="password" 
+              id="passwordInput" 
+              placeholder="Enter password" 
+              autocomplete="current-password"
+              class="w-full h-13 px-4 py-3.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 text-base"
+              required
+            >
+          </div>
+        </div>
+        <div id="loginError" class="hidden text-xs font-semibold text-rose-400 bg-rose-950/60 border border-rose-800/60 rounded-lg p-2.5">
+          Incorrect password. Please try again.
+        </div>
+        <button 
+          type="submit" 
+          class="w-full h-12 bg-orange-600 hover:bg-orange-500 active:scale-[0.98] font-bold text-white rounded-xl shadow-lg shadow-orange-600/30 transition-all flex items-center justify-center text-sm"
+        >
+          Sign In to Admin
+        </button>
+      </form>
+      <p class="text-[11px] text-slate-500">Authorized personnel only</p>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="appContainer" class="hidden max-w-md mx-auto min-h-screen flex flex-col">
+    
+    <!-- Top Mobile Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <img src="/logo.svg" alt="Morgan" class="w-7 h-7">
+        <div>
+          <span class="text-sm font-black tracking-tight text-slate-900 block leading-tight">Morgan Goods</span>
+          <span class="text-[10px] font-semibold text-emerald-600 flex items-center gap-1 leading-tight">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Store Admin
+          </span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/" target="_blank" class="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+          <span>Store</span>
+          <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+        <button id="logoutBtn" class="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg">
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Toast Alert -->
+    <div id="toast" class="fixed top-16 left-4 right-4 max-w-md mx-auto z-50 hidden transition-all duration-300">
+      <div id="toastInner" class="rounded-xl p-3.5 shadow-xl border text-sm font-bold flex items-center justify-between">
+        <span id="toastMsg">Action completed</span>
+        <button onclick="hideToast()" class="text-xs opacity-70 ml-2">✕</button>
+      </div>
+    </div>
+
+    <!-- TAB 1: ALL PRODUCTS -->
+    <main id="productsTab" class="flex-1 p-4 space-y-3.5">
+      <!-- Search & Filters -->
+      <div class="space-y-2">
+        <div class="relative">
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Search by product name or code..."
+            class="w-full h-11 pl-10 pr-9 bg-white border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          >
+          <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <button id="clearSearchBtn" class="hidden absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs font-bold">✕</button>
+        </div>
+
+        <!-- Category Horizontal Pills -->
+        <div id="categoryPills" class="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+          <button data-cat="all" class="cat-pill px-3 py-1.5 rounded-full text-xs font-bold bg-slate-900 text-white shrink-0">
+            All (<span id="totalCount">0</span>)
+          </button>
+          <!-- Categories will be injected here -->
+        </div>
+      </div>
+
+      <!-- Products List -->
+      <div id="productList" class="space-y-3 pt-1">
+        <!-- Loading Skeleton -->
+        <div id="loadingSkeleton" class="space-y-3">
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm animate-pulse flex gap-3">
+            <div class="w-20 h-20 bg-slate-200 rounded-xl shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-slate-200 rounded w-3/4"></div>
+              <div class="h-3 bg-slate-100 rounded w-1/2"></div>
+              <div class="h-4 bg-slate-200 rounded w-1/3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: ADD PRODUCT -->
+    <main id="addTab" class="hidden flex-1 p-4 space-y-4">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <div>
+          <h2 class="text-base font-extrabold text-slate-900">Add New Product</h2>
+          <p class="text-xs text-slate-500">Fill in the details below. It will appear live on the store immediately.</p>
+        </div>
+
+        <form id="addProductForm" class="space-y-4">
+          
+          <!-- Image Upload / Cover -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Product Photo <span class="text-rose-500">*</span>
+            </label>
+            <div 
+              id="uploadBox" 
+              class="relative border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-2xl p-4 text-center cursor-pointer transition-colors bg-slate-50 flex flex-col items-center justify-center min-h-[160px]"
+            >
+              <input 
+                type="file" 
+                id="imageInput" 
+                accept="image/*" 
+                capture="environment" 
+                class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              >
+              <div id="uploadPlaceholder" class="space-y-1.5 flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <p class="text-xs font-bold text-slate-700">Tap to Take or Upload Photo</p>
+                <p class="text-[11px] text-slate-400">JPG, PNG, WebP from your phone</p>
+              </div>
+
+              <!-- Preview -->
+              <div id="previewContainer" class="hidden w-full relative">
+                <img id="imagePreview" src="" alt="Preview" class="w-full h-48 object-contain rounded-xl bg-white border border-slate-200">
+                <button 
+                  type="button" 
+                  id="removeImageBtn" 
+                  class="absolute top-2 right-2 bg-slate-900/80 text-white rounded-full p-1.5 shadow hover:bg-slate-900"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Name -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Product Name <span class="text-rose-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="nameInput" 
+              placeholder="e.g. 4-Slice Sandwich Toaster" 
+              required
+              class="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+          </div>
+
+          <!-- Category -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Category <span class="text-rose-500">*</span>
+            </label>
+            <select 
+              id="categoryInput" 
+              required
+              class="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="">Select a Category</option>
+            </select>
+          </div>
+
+          <!-- Price & Original Price (Strikethrough) -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Selling Price (GH₵) <span class="text-rose-500">*</span>
+              </label>
+              <input 
+                type="number" 
+                step="0.01" 
+                id="priceInput" 
+                placeholder="0.00" 
+                required
+                class="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                Original Price (GH₵)
+              </label>
+              <input 
+                type="number" 
+                step="0.01" 
+                id="originalPriceInput" 
+                placeholder="Optional strike" 
+                class="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+            </div>
+          </div>
+
+          <!-- Model / Item Code -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Item Model / Code
+            </label>
+            <input 
+              type="text" 
+              id="codeInput" 
+              placeholder="e.g. ST-004 (or leave blank for auto)" 
+              class="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+          </div>
+
+          <!-- Description / Bio -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Description / Bio
+            </label>
+            <textarea 
+              id="descInput" 
+              rows="3" 
+              placeholder="Write a short description of the appliance or product..."
+              class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+            ></textarea>
+          </div>
+
+          <!-- Key Features (Bullet Points) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Key Features
+            </label>
+            <div class="flex gap-2">
+              <input 
+                type="text" 
+                id="featureTextInput" 
+                placeholder="e.g. 1000W fast heating" 
+                class="flex-1 h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+              <button 
+                type="button" 
+                id="addFeatureBtn" 
+                class="px-3.5 h-10 bg-slate-900 text-white rounded-xl text-xs font-bold shrink-0 hover:bg-slate-800"
+              >
+                + Add
+              </button>
+            </div>
+            <div id="featuresList" class="flex flex-wrap gap-1.5 mt-2">
+              <!-- Feature chips will render here -->
+            </div>
+          </div>
+
+          <!-- In Stock Switch -->
+          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div>
+              <span class="text-sm font-bold text-slate-800 block">Available in Stock</span>
+              <span class="text-[11px] text-slate-500">Visible for customer purchase</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="inStockInput" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button 
+            type="submit" 
+            id="submitBtn" 
+            class="w-full h-13 bg-orange-600 hover:bg-orange-500 active:scale-[0.98] font-bold text-white rounded-xl shadow-lg shadow-orange-600/30 transition-all flex items-center justify-center text-sm gap-2"
+          >
+            <span>Publish Product to Store</span>
+          </button>
+        </form>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile Friendly) -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200">
+      <div class="max-w-md mx-auto grid grid-cols-2 p-2 gap-2">
+        <button 
+          id="navProductsBtn" 
+          class="flex items-center justify-center gap-2 py-2.5 rounded-xl font-extrabold text-xs bg-orange-50 text-orange-600 border border-orange-200 transition-all"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <span>All Products (<span id="bottomCount">0</span>)</span>
+        </button>
+
+        <button 
+          id="navAddBtn" 
+          class="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-50 transition-all"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>+ Add Product</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+        <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <div class="text-center space-y-1">
+          <h3 class="text-base font-extrabold text-slate-900">Remove Product?</h3>
+          <p id="deleteProductName" class="text-xs text-slate-500 font-medium"></p>
+          <p class="text-[11px] text-rose-600 font-semibold pt-1">This will delete it from the live store immediately.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button id="cancelDeleteBtn" class="h-10 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200">
+            Cancel
+          </button>
+          <button id="confirmDeleteBtn" class="h-10 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700">
+            Yes, Remove
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State
+    let products = [];
+    let categories = [];
+    let currentCategory = 'all';
+    let currentFeatureList = [];
+    let uploadedCoverBase64 = '';
+    let productToDelete = null;
+
+    const ADMIN_PASS = 'morgan';
+    const AUTH_KEY = 'morgan_admin_auth';
+
+    // Elements
+    const loginSection = document.getElementById('loginSection');
+    const appContainer = document.getElementById('appContainer');
+    const loginForm = document.getElementById('loginForm');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginError = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const productsTab = document.getElementById('productsTab');
+    const addTab = document.getElementById('addTab');
+    const navProductsBtn = document.getElementById('navProductsBtn');
+    const navAddBtn = document.getElementById('navAddBtn');
+
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const categoryPills = document.getElementById('categoryPills');
+    const productList = document.getElementById('productList');
+    const totalCount = document.getElementById('totalCount');
+    const bottomCount = document.getElementById('bottomCount');
+
+    const addProductForm = document.getElementById('addProductForm');
+    const imageInput = document.getElementById('imageInput');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeImageBtn = document.getElementById('removeImageBtn');
+    const categoryInput = document.getElementById('categoryInput');
+    const featureTextInput = document.getElementById('featureTextInput');
+    const addFeatureBtn = document.getElementById('addFeatureBtn');
+    const featuresList = document.getElementById('featuresList');
+    const submitBtn = document.getElementById('submitBtn');
+
+    const deleteModal = document.getElementById('deleteModal');
+    const deleteProductName = document.getElementById('deleteProductName');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+    // 1. Authentication
+    function checkAuth() {
+      const isAuth = localStorage.getItem(AUTH_KEY) === 'true';
+      if (isAuth) {
+        loginSection.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        loadData();
+      } else {
+        loginSection.classList.remove('hidden');
+        appContainer.classList.add('hidden');
+      }
+    }
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (passwordInput.value.trim() === ADMIN_PASS) {
+        localStorage.setItem(AUTH_KEY, 'true');
+        loginError.classList.add('hidden');
+        checkAuth();
+      } else {
+        loginError.classList.remove('hidden');
+        passwordInput.focus();
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem(AUTH_KEY);
+      passwordInput.value = '';
+      checkAuth();
+    });
+
+    // 2. Navigation Tabs
+    function switchTab(tab) {
+      if (tab === 'products') {
+        productsTab.classList.remove('hidden');
+        addTab.classList.add('hidden');
+        navProductsBtn.className = 'flex items-center justify-center gap-2 py-2.5 rounded-xl font-extrabold text-xs bg-orange-50 text-orange-600 border border-orange-200 transition-all';
+        navAddBtn.className = 'flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-50 transition-all';
+      } else {
+        productsTab.classList.add('hidden');
+        addTab.classList.remove('hidden');
+        navAddBtn.className = 'flex items-center justify-center gap-2 py-2.5 rounded-xl font-extrabold text-xs bg-orange-50 text-orange-600 border border-orange-200 transition-all';
+        navProductsBtn.className = 'flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-50 transition-all';
+      }
+    }
+
+    navProductsBtn.addEventListener('click', () => switchTab('products'));
+    navAddBtn.addEventListener('click', () => switchTab('add'));
+
+    // 3. Load Products & Categories
+    async function loadData() {
+      try {
+        const [catRes, prodRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/products')
+        ]);
+        categories = await catRes.json();
+        products = await prodRes.json();
+        
+        renderCategories();
+        renderProducts();
+      } catch (err) {
+        showToast('Failed to load products: ' + err.message, true);
+      }
+    }
+
+    function renderCategories() {
+      // Dropdown in Add form
+      categoryInput.innerHTML = '<option value="">Select a Category</option>';
+      categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name;
+        categoryInput.appendChild(opt);
+      });
+
+      // Filter pills
+      categoryPills.innerHTML = `
+        <button data-cat="all" class="cat-pill px-3 py-1.5 rounded-full text-xs font-bold ${currentCategory === 'all' ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'} shrink-0">
+          All (<span id="totalCount">${products.length}</span>)
+        </button>
+      `;
+
+      categories.forEach(c => {
+        const btn = document.createElement('button');
+        btn.dataset.cat = c.name;
+        const isActive = currentCategory === c.name;
+        btn.className = `cat-pill px-3 py-1.5 rounded-full text-xs font-bold ${isActive ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700'} shrink-0`;
+        btn.textContent = `${c.name}`;
+        btn.onclick = () => {
+          currentCategory = c.name;
+          renderCategories();
+          renderProducts();
+        };
+        categoryPills.appendChild(btn);
+      });
+
+      categoryPills.querySelector('[data-cat="all"]').onclick = () => {
+        currentCategory = 'all';
+        renderCategories();
+        renderProducts();
+      };
+    }
+
+    function renderProducts() {
+      const q = (searchInput.value || '').trim().toLowerCase();
+      let filtered = products;
+
+      if (currentCategory !== 'all') {
+        filtered = filtered.filter(p => (p.category || '').toLowerCase() === currentCategory.toLowerCase());
+      }
+
+      if (q) {
+        filtered = filtered.filter(p => 
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.code && p.code.toLowerCase().includes(q)) ||
+          (p.description && p.description.toLowerCase().includes(q))
+        );
+      }
+
+      totalCount.textContent = products.length;
+      bottomCount.textContent = products.length;
+
+      if (filtered.length === 0) {
+        productList.innerHTML = `
+          <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2">
+            <p class="text-sm font-bold text-slate-800">No products found</p>
+            <p class="text-xs text-slate-500">Try adjusting your search or category filter</p>
+          </div>
+        `;
+        return;
+      }
+
+      productList.innerHTML = filtered.map(p => {
+        const coverImg = (p.images && p.images[0]) ? p.images[0] : '/logo.svg';
+        const hasOriginal = p.originalPrice && Number(p.originalPrice) > Number(p.price);
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm flex gap-3 relative">
+            <div class="w-20 h-20 bg-slate-50 rounded-xl overflow-hidden border border-slate-100 shrink-0 flex items-center justify-center">
+              <img src="${coverImg}" alt="${p.name}" class="w-full h-full object-contain p-1" onerror="this.src='/logo.svg'">
+            </div>
+            <div class="flex-1 min-w-0 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center gap-1.5 mb-0.5">
+                  <span class="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full truncate max-w-[140px]">
+                    ${p.category || 'General'}
+                  </span>
+                  ${p.code ? `<span class="text-[10px] text-slate-400 font-mono">${p.code}</span>` : ''}
+                </div>
+                <h3 class="text-xs font-bold text-slate-900 line-clamp-1 leading-tight">${p.name}</h3>
+                <div class="flex items-baseline gap-1.5 mt-1">
+                  <span class="text-sm font-black text-slate-900">GH₵${Number(p.price).toLocaleString()}</span>
+                  ${hasOriginal ? `<span class="text-[11px] text-slate-400 line-through">GH₵${Number(p.originalPrice).toLocaleString()}</span>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-[10px] font-semibold ${p.inStock !== false ? 'text-emerald-600' : 'text-slate-400'}">
+                  ${p.inStock !== false ? '● In Stock' : '○ Out of stock'}
+                </span>
+                <button 
+                  onclick="openDeleteModal('${p.id}', '${p.name.replace(/'/g, "\\'")}')" 
+                  class="text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg flex items-center gap-1 active:scale-95 transition-all"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  <span>Remove</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Search events
+    searchInput.addEventListener('input', () => {
+      clearSearchBtn.classList.toggle('hidden', !searchInput.value);
+      renderProducts();
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      clearSearchBtn.classList.add('hidden');
+      renderProducts();
+    });
+
+    // 4. Image Resizing & Upload
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          // Resize to max 800px on canvas to keep upload lightweight
+          const maxDim = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Get compressed WebP or JPEG
+          uploadedCoverBase64 = canvas.toDataURL('image/webp', 0.82);
+          imagePreview.src = uploadedCoverBase64;
+          uploadPlaceholder.classList.add('hidden');
+          previewContainer.classList.remove('hidden');
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    removeImageBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      uploadedCoverBase64 = '';
+      imageInput.value = '';
+      uploadPlaceholder.classList.remove('hidden');
+      previewContainer.classList.add('hidden');
+    });
+
+    // 5. Features handling
+    function addFeature() {
+      const val = featureTextInput.value.trim();
+      if (!val) return;
+      currentFeatureList.push(val);
+      featureTextInput.value = '';
+      renderFeatureChips();
+    }
+
+    addFeatureBtn.addEventListener('click', addFeature);
+    featureTextInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addFeature();
+      }
+    });
+
+    function renderFeatureChips() {
+      featuresList.innerHTML = currentFeatureList.map((f, idx) => `
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 text-orange-800 text-[11px] font-semibold">
+          <span>${f}</span>
+          <button type="button" onclick="removeFeature(${idx})" class="text-orange-500 hover:text-orange-800">✕</button>
+        </span>
+      `).join('');
+    }
+
+    window.removeFeature = function(idx) {
+      currentFeatureList.splice(idx, 1);
+      renderFeatureChips();
+    };
+
+    // 6. Submit Add Product Form
+    addProductForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!uploadedCoverBase64) {
+        showToast('Please select or take a photo for the product', true);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+        <span>Publishing to Store...</span>
+      `;
+
+      const newProductPayload = {
+        name: document.getElementById('nameInput').value.trim(),
+        category: categoryInput.value,
+        price: parseFloat(document.getElementById('priceInput').value),
+        originalPrice: document.getElementById('originalPriceInput').value ? parseFloat(document.getElementById('originalPriceInput').value) : null,
+        code: document.getElementById('codeInput').value.trim() || undefined,
+        description: document.getElementById('descInput').value.trim(),
+        features: currentFeatureList,
+        inStock: document.getElementById('inStockInput').checked,
+        image: uploadedCoverBase64
+      };
+
+      try {
+        const res = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer morgan'
+          },
+          body: JSON.stringify(newProductPayload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Server rejected product');
+        }
+
+        const data = await res.json();
+        products.unshift(data.product);
+
+        // Reset Form
+        addProductForm.reset();
+        uploadedCoverBase64 = '';
+        currentFeatureList = [];
+        renderFeatureChips();
+        uploadPlaceholder.classList.remove('hidden');
+        previewContainer.classList.add('hidden');
+
+        showToast('✅ Product published to store!');
+        renderCategories();
+        renderProducts();
+        switchTab('products');
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Publish Product to Store</span>';
+      }
+    });
+
+    // 7. Delete Product Flow
+    window.openDeleteModal = function(id, name) {
+      productToDelete = id;
+      deleteProductName.textContent = `"${name}"`;
+      deleteModal.classList.remove('hidden');
+    };
+
+    cancelDeleteBtn.addEventListener('click', () => {
+      productToDelete = null;
+      deleteModal.classList.add('hidden');
+    });
+
+    confirmDeleteBtn.addEventListener('click', async () => {
+      if (!productToDelete) return;
+      
+      confirmDeleteBtn.disabled = true;
+      confirmDeleteBtn.textContent = 'Removing...';
+
+      try {
+        const res = await fetch(`/api/admin/products/${productToDelete}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': 'Bearer morgan'
+          }
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to delete product from server');
+        }
+
+        // Remove locally
+        products = products.filter(p => String(p.id) !== String(productToDelete));
+        renderProducts();
+        showToast('🗑️ Product removed from store');
+      } catch (err) {
+        showToast('Error: ' + err.message, true);
+      } finally {
+        confirmDeleteBtn.disabled = false;
+        confirmDeleteBtn.textContent = 'Yes, Remove';
+        deleteModal.classList.add('hidden');
+        productToDelete = null;
+      }
+    });
+
+    // 8. Toast Helper
+    let toastTimer = null;
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      const toastInner = document.getElementById('toastInner');
+      const toastMsg = document.getElementById('toastMsg');
+
+      toastMsg.textContent = msg;
+      toastInner.className = isError 
+        ? 'rounded-xl p-3.5 shadow-xl border text-xs font-bold flex items-center justify-between bg-rose-600 text-white border-rose-700'
+        : 'rounded-xl p-3.5 shadow-xl border text-xs font-bold flex items-center justify-between bg-slate-900 text-white border-slate-800';
+
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(hideToast, 3500);
+    }
+
+    function hideToast() {
+      document.getElementById('toast').classList.add('hidden');
+    }
+
+    // Init
+    checkAuth();
+  </script>
+</body>
+</html>

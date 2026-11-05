@@ -1,9 +1,83 @@
-import categories from './data/api_categories.json';
-import products from './data/api_products.json';
+import categoriesData from './data/api_categories.json';
+import productsData from './data/api_products.json';
 import wholesaleCategories from './data/api_wholesale_categories.json';
 import wholesaleProducts from './data/api_wholesale_products.json';
 
+// Mutable in-memory product list (seeded from bundled JSON at startup)
+let liveProducts = [...productsData];
 const memoryCarts = new Map();
+
+// GitHub repo details for persistent sync
+const GH_OWNER = 'Calvras';
+const GH_REPO = 'Morgan';
+const GH_PATH = 'data/api_products.json';
+// GH_TOKEN is loaded from env.GH_TOKEN (Cloudflare Worker secret)
+
+// Upload product image to GitHub and return a public URL
+async function uploadImageToGitHub(base64DataUrl, productId, ghToken) {
+  try {
+    // Strip data URL prefix: "data:image/webp;base64,..."
+    const match = base64DataUrl.match(/^data:([a-zA-Z0-9+\/]+\/[a-zA-Z0-9+\/]+);base64,(.+)$/);
+    if (!match) return null;
+    const ext = match[1].includes('png') ? 'png' : match[1].includes('webp') ? 'webp' : 'jpg';
+    const content = match[2];
+    const filename = `public/products/admin-${productId}.${ext}`;
+
+    const uploadRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${filename}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${ghToken}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'MorganWorker/1.0'
+      },
+      body: JSON.stringify({
+        message: `Upload product image ${filename}`,
+        content: content
+      })
+    });
+
+    if (!uploadRes.ok) return null;
+    const uploadData = await uploadRes.json();
+    // Return the path relative to the site (Cloudflare serves /products/...)
+    return uploadData.content ? `/products/admin-${productId}.${ext}` : null;
+  } catch {
+    return null;
+  }
+}
+
+// Sync liveProducts to GitHub so changes persist across redeployments
+async function syncProductsToGitHub(ghToken) {
+  try {
+    // Get current SHA
+    const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+      headers: {
+        'Authorization': `token ${ghToken}`,
+        'User-Agent': 'MorganWorker/1.0'
+      }
+    });
+    const existing = await getRes.json();
+    const sha = existing.sha;
+
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(liveProducts, null, 2))));
+
+    await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${ghToken}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'MorganWorker/1.0'
+      },
+      body: JSON.stringify({
+        message: 'Admin: sync product list',
+        content,
+        sha
+      })
+    });
+  } catch (e) {
+    // Non-fatal: in-memory state is already updated
+    console.error('GitHub sync failed:', e);
+  }
+}
 
 function getOrCreateCart(sessionId = 'default-session') {
   if (!memoryCarts.has(sessionId)) {
@@ -60,13 +134,18 @@ export default {
       });
     }
 
+    // Serve admin page HTML for /admin-page and /admin-page/
+    if (pathname === '/admin-page' || pathname === '/admin-page/') {
+      return env.ASSETS.fetch(new Request(new URL('/admin-page/index.html', request.url), request));
+    }
+
     // Only intercept /api/ routes; let env.ASSETS handle all static files & SPA
     if (pathname.startsWith('/api/')) {
       const apiPath = pathname.replace(/^\/api\//, '');
 
       // 1. Categories
       if (apiPath === 'categories') {
-        return jsonResponse(categories);
+        return jsonResponse(categoriesData);
       }
       if (apiPath === 'wholesale/categories') {
         return jsonResponse(wholesaleCategories);
@@ -86,9 +165,9 @@ export default {
         const q = url.searchParams.get('q');
         const id = url.searchParams.get('id');
 
-        let result = products;
+        let result = liveProducts;
         if (id) {
-          const p = products.find(prod => String(prod.id) === String(id));
+          const p = liveProducts.find(prod => String(prod.id) === String(id));
           return jsonResponse(p ? [p] : []);
         }
         if (category) {
@@ -111,7 +190,7 @@ export default {
 
       if (apiPath.startsWith('products/')) {
         const idOrCode = apiPath.replace('products/', '');
-        const product = products.find(p => String(p.id) === idOrCode || p.code === idOrCode);
+        const product = liveProducts.find(p => String(p.id) === idOrCode || p.code === idOrCode);
         if (!product) return jsonResponse({ error: 'Product not found' }, 404);
         return jsonResponse(product);
       }
@@ -159,7 +238,7 @@ export default {
           const sessionId = body.sessionId || url.searchParams.get('sessionId') || 'default-session';
           const { productId, quantity = 1 } = body;
           const cart = getOrCreateCart(sessionId);
-          const product = products.find(p => String(p.id) === String(productId));
+          const product = liveProducts.find(p => String(p.id) === String(productId));
 
           if (!product) return jsonResponse({ error: 'Product not found' }, 404);
 
@@ -240,6 +319,80 @@ export default {
 
       if (apiPath === 'orders/track') {
         return jsonResponse({ error: 'No order found with the provided details.' }, 404);
+      }
+
+      // =====================================================
+      // 7. ADMIN API — Protected with Bearer token
+      // =====================================================
+
+      if (apiPath.startsWith('admin/')) {
+        const authHeader = request.headers.get('Authorization') || '';
+        if (authHeader !== 'Bearer morgan') {
+          return jsonResponse({ error: 'Unauthorized' }, 401);
+        }
+
+        // GET /api/admin/products — List all products
+        if (apiPath === 'admin/products' && method === 'GET') {
+          return jsonResponse(liveProducts);
+        }
+
+        // POST /api/admin/products — Add a new product
+        if (apiPath === 'admin/products' && method === 'POST') {
+          const body = await request.json().catch(() => ({}));
+          const { name, category, price, originalPrice, code, description, features, inStock, image } = body;
+
+          if (!name || !price || !category) {
+            return jsonResponse({ error: 'name, price, and category are required' }, 400);
+          }
+
+          const newId = Date.now();
+          const newCode = code || `ADM-${newId.toString().slice(-6)}`;
+
+          // Try to upload image to GitHub repo for permanent hosting
+          let imageUrl = null;
+          if (image && image.startsWith('data:')) {
+            const uploaded = await uploadImageToGitHub(image, newId, env.GH_TOKEN);
+            imageUrl = uploaded; // may be null if upload failed
+          }
+
+          const newProduct = {
+            id: newId,
+            name,
+            code: newCode,
+            price: Number(price),
+            originalPrice: originalPrice ? Number(originalPrice) : null,
+            category,
+            inStock: inStock !== false,
+            images: imageUrl ? [imageUrl] : (image ? [image] : []),
+            description: description || '',
+            features: Array.isArray(features) ? features : [],
+            rating: 0,
+            reviewCount: 0,
+            isFeatured: false
+          };
+
+          liveProducts.unshift(newProduct);
+
+          // Sync to GitHub (async background task)
+          syncProductsToGitHub(env.GH_TOKEN);
+
+          return jsonResponse({ success: true, product: newProduct });
+        }
+
+        // DELETE /api/admin/products/:id — Remove a product
+        if (apiPath.startsWith('admin/products/') && method === 'DELETE') {
+          const productId = apiPath.replace('admin/products/', '');
+          const idx = liveProducts.findIndex(p => String(p.id) === String(productId));
+          if (idx === -1) {
+            return jsonResponse({ error: 'Product not found' }, 404);
+          }
+
+          liveProducts.splice(idx, 1);
+
+          syncProductsToGitHub(env.GH_TOKEN);
+
+          return jsonResponse({ success: true, deletedId: productId });
+        }
       }
     }
 
