@@ -288,6 +288,70 @@ app.use('/api/storage/public-objects/supplier-catalog', express.static(
   path.join(publicDir, 'api', 'storage', 'public-objects', 'supplier-catalog')
 ));
 
+// Admin Portal Routes
+app.get('/admin-page', (req, res) => {
+  res.sendFile(path.join(publicDir, 'admin-page/index.html'));
+});
+
+app.get('/api/admin/products', (req, res) => {
+  const auth = req.headers.authorization;
+  if (auth !== 'Bearer morgan') return res.status(401).json({ error: 'Unauthorized' });
+  res.json(products);
+});
+
+app.post('/api/admin/products', (req, res) => {
+  const auth = req.headers.authorization;
+  if (auth !== 'Bearer morgan') return res.status(401).json({ error: 'Unauthorized' });
+
+  const { name, category, price, originalPrice, code, description, features, inStock, image } = req.body;
+  if (!name || !price || !category) {
+    return res.status(400).json({ error: 'name, price, and category are required' });
+  }
+
+  const newId = Date.now();
+  const newProduct = {
+    id: newId,
+    name,
+    code: code || `ADM-${newId.toString().slice(-6)}`,
+    price: Number(price),
+    originalPrice: originalPrice ? Number(originalPrice) : null,
+    category,
+    inStock: inStock !== false,
+    images: image ? [image] : [],
+    description: description || '',
+    features: Array.isArray(features) ? features : [],
+    rating: 0,
+    reviewCount: 0,
+    isFeatured: false
+  };
+
+  products.unshift(newProduct);
+  try {
+    fs.writeFileSync('./data/api_products.json', JSON.stringify(products, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Failed to write products:', err);
+  }
+
+  res.json({ success: true, product: newProduct });
+});
+
+app.delete('/api/admin/products/:id', (req, res) => {
+  const auth = req.headers.authorization;
+  if (auth !== 'Bearer morgan') return res.status(401).json({ error: 'Unauthorized' });
+
+  const idx = products.findIndex(p => String(p.id) === String(req.params.id));
+  if (idx === -1) return res.status(404).json({ error: 'Product not found' });
+
+  products.splice(idx, 1);
+  try {
+    fs.writeFileSync('./data/api_products.json', JSON.stringify(products, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Failed to write products:', err);
+  }
+
+  res.json({ success: true, deletedId: req.params.id });
+});
+
 // Serve static directory
 app.use(express.static(publicDir));
 
