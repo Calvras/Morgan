@@ -134,6 +134,17 @@ export default {
       });
     }
 
+    // Google Search Console verification
+    if (pathname === '/googlec3eb02de72e21254.html' || pathname === '/googlec3eb02de72e21254') {
+      return new Response('google-site-verification: googlec3eb02de72e21254.html', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache'
+        }
+      });
+    }
+
     // Serve admin page HTML for /admin-page and /admin-page/
     if (pathname === '/admin-page' || pathname === '/admin-page/') {
       return env.ASSETS.fetch(new Request(new URL('/admin-page/index.html', request.url), request));
