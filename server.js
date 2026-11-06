@@ -367,7 +367,7 @@ app.use((req, res) => {
 // Start listening
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
-  console.log(`Morgan Appliances replica server running!`);
+  console.log(`Morgan Retail replica server running!`);
   console.log(`Local URL: http://localhost:${PORT}`);
   console.log(`Static assets from: ${publicDir}`);
   console.log(`Products loaded: ${products.length}`);
