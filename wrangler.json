@@ -3,6 +3,7 @@
   "name": "morgan",
   "main": "worker.js",
   "compatibility_date": "2024-09-23",
+  "workers_dev": true,
   "observability": {
     "enabled": true
   },
@@ -11,5 +12,17 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "html_handling": "none"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "PRODUCTS_KV",
+      "id": "85438d297c6543cc9d9d12ad4adf8a4a"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "morganappliance.online/*",
+      "zone_name": "morganappliance.online"
+    }
+  ]
 }
